@@ -25,6 +25,11 @@ class UsuarioPublic(BaseModel):
 class UserList(BaseModel):
     users: list[UsuarioPublic]
 
+class UsuarioUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[str] = None
+    senha: Optional[str] = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str
