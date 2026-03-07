@@ -14,7 +14,7 @@ from app.schemas.usuario import UserList, UsuarioCreate, UsuarioLogin, UsuarioPu
 from app.seguranca import create_access_token, get_password_hash, verify_password
 
 
-rota_autenticacao = APIRouter(prefix="/authentication", tags=["authentication"])
+rota_autenticacao = APIRouter(prefix="/api/authentication", tags=["authentication"])
 
 @rota_autenticacao.post("/register", response_model=UsuarioPublic, status_code=status.HTTP_201_CREATED)
 async def register(user_in: UsuarioCreate, db: Session = Depends(get_db)):

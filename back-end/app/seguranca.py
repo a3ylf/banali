@@ -54,7 +54,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         print(f"Erro na verificação: {e}")
         return False
     
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/authentication/token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/authentication/token')
 
 def get_current_user(
     session: Session = Depends(get_db),
