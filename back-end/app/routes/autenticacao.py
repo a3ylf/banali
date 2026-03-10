@@ -33,7 +33,7 @@ async def register(user_in: UsuarioCreate, db: Session = Depends(get_db)):
     new_user = Usuario(
         nome=user_in.nome,
         email=user_in.email,
-        senha=hashed_password,
+        senha_hash=hashed_password,
     )
 
     # Salva no banco de dados
@@ -70,7 +70,7 @@ async def login(
             detail="Credencial inválida"
         )
 
-    if not verify_password(credentials.senha, user.senha):
+    if not verify_password(credentials.senha, user.senha_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credencial inválida"

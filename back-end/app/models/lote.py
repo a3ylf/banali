@@ -1,4 +1,5 @@
-from sqlalchemy import CheckConstraint, Column, Integer, ForeignKey, Date
+import uuid
+from sqlalchemy import UUID, Boolean, CheckConstraint, Column, Integer, ForeignKey, Date, UniqueConstraint
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -6,15 +7,15 @@ class Lote(Base):
     __tablename__ = "lote"
 
     __table_args__ = (
-        CheckConstraint("quantidade_disponivel >= 0", name="check_quantidade_positiva"),
+    CheckConstraint("quantidade_disponivel >= 0", name="check_quantidade_positiva"),
+    UniqueConstraint("id_produto", "data_validade", name="uq_lote_validade"),
     )
 
-    id_lote = Column(Integer, primary_key=True, index=True)
-    id_item = Column(Integer, ForeignKey("produto.id_produto"))
-    quantidade_inicial = Column(Integer, nullable=False)
+    id_lote = Column(UUID(as_uuid = True), primary_key= True, default=uuid.uuid4)
+    id_produto = Column(UUID(as_uuid=True), ForeignKey("produto.id_produto"))
     quantidade_disponivel = Column(Integer, nullable=False)
-    data_entrada = Column(Date)
-    data_validade = Column(Date)
+    data_validade = Column(Date, nullable=False)
+    esta_valido = Column(Boolean, nullable=False)
 
     produto = relationship("Produto", back_populates="lotes")
     movimentacoes_lote = relationship("MovimentacaoLote", back_populates="lote")
