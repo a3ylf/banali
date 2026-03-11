@@ -15,6 +15,16 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/*"],
+      "@/hooks/*": ["src/hooks/*"],
+      "@/lib/*": ["src/lib/*"],
+      "next/link": ["src/lib/next-link.tsx"],
+      "next/navigation": ["src/lib/next-navigation.ts"],
+      "next-themes": ["src/lib/theme.tsx"]
+    },
 
     /* Linting */
     "strict": true,

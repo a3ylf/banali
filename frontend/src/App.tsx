@@ -1,34 +1,40 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { CTASection } from '@/landing/cta'
+import { FeaturesSection } from '@/landing/features'
+import { FooterSection } from '@/landing/footer'
+import { HeroSection } from '@/landing/hero'
+import { HowItWorksSection } from '@/landing/how-it-works'
+import { LandingHeader } from '@/landing/header'
+import { StatsSection } from '@/landing/stats'
+import { TestimonialsSection } from '@/landing/testimonials'
+import { DashboardPage } from '@/dashboard/page'
+import { usePathname } from '@/lib/next-navigation'
+import { ThemeProvider } from './theme-provider'
+
+function LandingPage() {
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <LandingHeader />
+      <main>
+        <HeroSection />
+        <FeaturesSection />
+        <StatsSection />
+        <HowItWorksSection />
+        <TestimonialsSection />
+        <CTASection />
+      </main>
+      <FooterSection />
+    </div>
+  )
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const pathname = usePathname()
+  const isDashboard = pathname.startsWith('/dashboard')
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      {isDashboard ? <DashboardPage /> : <LandingPage />}
+    </ThemeProvider>
   )
 }
 
