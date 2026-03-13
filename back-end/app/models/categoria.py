@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import Column, Integer, String, Boolean, UUID
 from sqlalchemy.orm import relationship
-from app.database import Base
+from core.database.database import Base
 
 class Categoria(Base):
     __tablename__ = "categoria"

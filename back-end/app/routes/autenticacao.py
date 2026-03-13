@@ -6,12 +6,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from passlib.context import CryptContext
-from jose import jwt
+from jose import JWTError, jwt
 
-from app.database import get_db
+from database.database import get_db
 from app.models.usuario import Usuario
-from app.schemas.usuario import UserList, UsuarioCreate, UsuarioLogin, UsuarioPublic, Token
-from app.seguranca import create_access_token, get_password_hash, verify_password
+from app.schemas.usuario import RefreshToken, Token, UserList, UsuarioCreate, UsuarioLogin, UsuarioPublic
+from core.seguranca import ALGORITHM, SECRET_KEY, create_access_token, create_refresh_token, get_password_hash, verify_password
 
 
 rota_autenticacao = APIRouter(prefix="/api/authentication", tags=["authentication"])
@@ -57,7 +57,7 @@ async def register(user_in: UsuarioCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@rota_autenticacao.post("/login", response_model=Token)
+@rota_autenticacao.post("/login", response_model=RefreshToken)
 async def login(
     credentials: UsuarioLogin,
     db: Session = Depends(get_db)
@@ -77,11 +77,33 @@ async def login(
         )
 
     access_token = create_access_token({"sub": user.email})
+    refresh_token = create_refresh_token({"sub": user.email})
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer"
     }
+
+@rota_autenticacao.post("/refresh", response_model=Token)
+def refresh_token(refresh_token: str):
+
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+
+        if email is None:
+            raise HTTPException(status_code=401, detail="Token inválido")
+
+        new_access_token = create_access_token({"sub": email})
+
+        return {
+            "access_token": new_access_token,
+            "token_type": "bearer"
+        }
+
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Refresh token inválido")
 
 @rota_autenticacao.post("/token")
 def login_oauth2(
@@ -92,7 +114,7 @@ def login_oauth2(
         Usuario.email == form_data.username
     ).first()
 
-    if not user or not verify_password(form_data.password, user.senha):
+    if not user or not verify_password(form_data.password, user.senha_hash):
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
     access_token = create_access_token({"sub": user.email})

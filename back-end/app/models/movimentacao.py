@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import UUID, Column, Enum, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from database.database import Base
 from datetime import datetime
 
 class Movimentacao(Base):

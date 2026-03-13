@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import UUID, CheckConstraint, Column, Integer, String
-from app.database import Base
+from database.database import Base
 from sqlalchemy.orm import relationship
 
 class Local(Base):

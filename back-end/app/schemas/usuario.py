@@ -22,7 +22,7 @@ class UsuarioPublic(BaseModel):
     email: EmailStr
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserList(BaseModel):
     users: list[UsuarioPublic]
@@ -35,3 +35,6 @@ class UsuarioUpdate(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class RefreshToken(Token):
+    refresh_token: str

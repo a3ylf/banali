@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.database import get_db
+from database.database import get_db
 from app.models.usuario import Usuario
 from app.schemas.usuario import UserList, UsuarioCreate, UsuarioPublic, UsuarioUpdate
 from sqlalchemy.orm import Session
 
-from app.seguranca import get_current_user, get_password_hash
+from core.seguranca import get_current_user, get_password_hash
 
 
 rota_usuario = APIRouter(prefix="/api/core", tags=["core"])
 
-@rota_usuario.get("/users", response_model=UserList)
+@rota_usuario.get("/users/", response_model=UserList)
 async def read_users(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     users = db.query(Usuario).all()
     return { 'users': users}
