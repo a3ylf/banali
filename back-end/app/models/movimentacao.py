@@ -14,8 +14,8 @@ class Movimentacao(Base):
     )
     data_movimentacao = Column(DateTime, default=datetime.utcnow, nullable=False)
     id_usuario = Column(UUID(as_uuid=True), ForeignKey("usuario.id_usuario"))
-    id_destino = Column(UUID(as_uuid=True), ForeignKey("local.id_local"), nullable=False)
-    id_origem = Column(UUID(as_uuid=True), ForeignKey("local.id_local"), nullable=False)
+    id_destino = Column(UUID(as_uuid=True), ForeignKey("local.id_local"), nullable=True)
+    id_origem = Column(UUID(as_uuid=True), ForeignKey("local.id_local"), nullable=True)
 
     usuario = relationship("Usuario", back_populates="movimentacoes")
     itens = relationship("MovimentacaoLote", back_populates="movimentacao")
