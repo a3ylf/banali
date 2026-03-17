@@ -8,8 +8,8 @@ class Local(Base):
 
     id_local = Column(UUID(as_uuid = True), primary_key= True, default=uuid.uuid4)
     nome_local = Column(String, nullable=False)
-    cpf_local = Column(String, unique=True)
-    cnpj_local = Column(String, unique=True)
+    cpf_local = Column(String(11), unique=True, nullable=True)
+    cnpj_local = Column(String(14), unique=True, nullable=True)
     
     movimentacoes_origem = relationship(
         "Movimentacao",

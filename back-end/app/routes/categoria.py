@@ -16,7 +16,7 @@ async def read_categories(db: Session = Depends(get_db), current_user: Usuario =
     categorias = db.query(Categoria).all()
     return {"categorias": categorias}
 
-@rota_categoria.get("/categories/{categoria_id}", response_model=CategoriaPublic)
+@rota_categoria.get("/categories/{categories_id}", response_model=CategoriaPublic)
 async def get_category(
     categoria_id: UUID,
     db: Session = Depends(get_db),
@@ -64,7 +64,7 @@ async def create_category(
     
     return nova_categoria
 
-@rota_categoria.put("/categories/{categoria_id}", response_model=CategoriaPublic)
+@rota_categoria.put("/categories/{categories_id}", response_model=CategoriaPublic)
 async def update_category_put(
     categoria_id: UUID,
     categorie_in: CategoriaUpdate,  # ou CategoriaUpdate, tanto faz
@@ -100,7 +100,7 @@ async def update_category_put(
     
     return categoria
     
-@rota_categoria.delete("/categories/{categoria_id}", status_code=status.HTTP_204_NO_CONTENT)
+@rota_categoria.delete("/categories/{categories_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_category(
     categoria_id: UUID,
     db: Session = Depends(get_db),
@@ -125,4 +125,6 @@ async def delete_category(
     db.commit()
     
     return None  # Retorna 204 No Content
+
+
 

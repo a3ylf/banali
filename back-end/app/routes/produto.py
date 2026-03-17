@@ -3,7 +3,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi.routing import APIRouter
 
-from core.database.database import get_db
+from app.models.lote import Lote
+from database.database import get_db
 from app.models.categoria import Categoria
 from app.models.produto import Produto
 from app.models.usuario import Usuario
@@ -18,7 +19,7 @@ async def read_products(db: Session = Depends(get_db), current_user: Usuario = D
     produtos = db.query(Produto).all()
     return {"produtos":produtos}
 
-@rota_produto.get("/products/{product_id}", response_model=ProdutoPublic)
+@rota_produto.get("/products/{products_id}", response_model=ProdutoPublic)
 async def get_product(
     produto_id: UUID,
     db: Session = Depends(get_db),
@@ -35,7 +36,7 @@ async def get_product(
     return produto
 
 @rota_produto.post("/products/", response_model=ProdutoPublic, status_code=status.HTTP_201_CREATED)
-async def create_produto(
+async def create_product(
     produto_in: ProdutoCreate,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
@@ -73,7 +74,7 @@ async def create_produto(
     
     return novo_produto
 
-@rota_produto.put("/products/{produto_id}", response_model=ProdutoPublic)
+@rota_produto.put("/products/{products_id}", response_model=ProdutoPublic)
 async def update_product(
     produto_id: UUID,
     produto_in: ProdutoUpdate,
@@ -143,7 +144,7 @@ async def update_product(
     
     return produto
 
-@rota_produto.delete("/products/{produto_id}", status_code=status.HTTP_204_NO_CONTENT)
+@rota_produto.delete("/products/{products_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_product(
     produto_id: UUID,
     db: Session = Depends(get_db),
@@ -161,3 +162,13 @@ async def delete_product(
     db.commit()
     
     return None #204 No Content
+
+@rota_produto.get("/products/{id_product}/batches")
+async def get_lotes_by_produto(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    lotes = db.query(Lote).filter(Lote.id_produto == id).all()
+
+    return {"lotes": lotes}
