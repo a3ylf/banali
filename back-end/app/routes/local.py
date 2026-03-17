@@ -39,6 +39,18 @@ async def create_place(
     db: Session = Depends(get_db), 
     current_user: Usuario = Depends(get_current_user)
 ):
+    
+    if local_in.cnpj_local and len(local_in.cnpj_local) != 14:
+     raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="O CNPJ deve possuir 14 números."
+    )
+   
+    if local_in.cpf_local and len(local_in.cpf_local) != 11:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="O CPF deve possuir 11 números."
+        )
 
     nome_normalizado = local_in.nome_local.strip().title()
 
