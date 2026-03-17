@@ -3,6 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi.routing import APIRouter
 
+from app.models.lote import Lote
 from database.database import get_db
 from app.models.categoria import Categoria
 from app.models.produto import Produto
@@ -161,3 +162,13 @@ async def delete_product(
     db.commit()
     
     return None #204 No Content
+
+@rota_produto.get("/products/{id_product}/batches")
+async def get_lotes_by_produto(
+    id: UUID,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    lotes = db.query(Lote).filter(Lote.id_produto == id).all()
+
+    return {"lotes": lotes}
