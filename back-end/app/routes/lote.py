@@ -36,6 +36,9 @@ async def read_batches(
     for lote in lotes:
         dias_para_vencer = (lote.data_validade - hoje).days
 
+        if(dias_para_vencer < 0):
+            lote.esta_valido = False
+
         resultado.append({
             "id_lote": lote.id_lote,
             "id_produto": lote.id_produto,
