@@ -57,7 +57,6 @@ async def create_product(
         nome_produto=produto_in.nome_produto.strip().title(),
         descricao=produto_in.descricao.strip(),
         unidade_medida=produto_in.unidade_medida.lower(),
-        valor_numerico=produto_in.valor_numerico,
         id_categoria=produto_in.id_categoria
     )
     
@@ -127,10 +126,6 @@ async def update_product(
     # Unidade de medida
     if produto_in.unidade_medida is not None:
         produto.unidade_medida = produto_in.unidade_medida
-    
-    # Valor numérico 
-    if produto_in.valor_numerico is not None:
-        produto.valor_numerico = produto_in.valor_numerico
     
     try:
         db.commit()

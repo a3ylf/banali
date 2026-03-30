@@ -10,7 +10,6 @@ class Produto(Base):
     nome_produto = Column(String, nullable=False)
     descricao = Column(String)
     unidade_medida = Column(String, nullable=False)
-    valor_numerico = Column(Float, nullable=False)
     id_categoria = Column(UUID(as_uuid=True), ForeignKey("categoria.id_categoria"))
 
     categoria = relationship("Categoria", back_populates="produtos")
