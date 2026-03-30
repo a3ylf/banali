@@ -142,7 +142,7 @@ Antes de iniciar o servidor, é necessário executar o script responsável por c
 Execute o seguinte comando:
 
 ```bash
-python app/utils/create_tables.py
+python -m utils.create_tables
 ```
 
 Esse script irá criar automaticamente todas as tabelas definidas nos modelos da aplicação.

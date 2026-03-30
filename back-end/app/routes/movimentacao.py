@@ -51,7 +51,7 @@ async def create_input(
         lote.quantidade_disponivel += entrada_in.quantidade
     else:
         lote = Lote(
-            produto_id=entrada_in.id_produto,
+            id_produto=entrada_in.id_produto,
             quantidade_disponivel=entrada_in.quantidade,
             data_validade=entrada_in.data_validade,
             esta_valido=True
