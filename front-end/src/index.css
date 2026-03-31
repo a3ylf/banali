@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Matte Ceramic — Alimentar OS */
+    --background: 200 10% 98%;
+    --foreground: 230 15% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 230 15% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 15% 18%;
+
+    /* Verde botânico */
+    --primary: 145 45% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 8% 95%;
+    --secondary-foreground: 230 15% 18%;
+
+    --muted: 200 8% 95%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 145 45% 38%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Âmbar suave para validades */
+    --warning: 40 85% 55%;
+    --warning-foreground: 30 60% 20%;
+
+    --destructive: 10 65% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 10% 92%;
+    --input: 220 10% 92%;
+    --ring: 145 45% 38%;
+
+    --radius: 0.5rem;
+
+    /* Charts */
+    --chart-1: 145 45% 38%;
+    --chart-2: 200 60% 50%;
+    --chart-3: 40 85% 55%;
+    --chart-4: 280 40% 55%;
+    --chart-5: 10 65% 48%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 230 10% 30%;
+    --sidebar-primary: 145 45% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 8% 95%;
+    --sidebar-accent-foreground: 230 10% 30%;
+    --sidebar-border: 220 10% 92%;
+    --sidebar-ring: 145 45% 38%;
+
+    /* Custom */
+    --surface: 0 0% 100%;
+    --surface-hover: 200 5% 97%;
+    --expiry-near: 40 90% 94%;
+    --expiry-near-border: 40 70% 70%;
+    --tab-bar-height: 4.5rem;
+  }
+
+  .dark {
+    --background: 230 15% 8%;
+    --foreground: 200 10% 92%;
+    --card: 230 15% 11%;
+    --card-foreground: 200 10% 92%;
+    --popover: 230 15% 11%;
+    --popover-foreground: 200 10% 92%;
+    --primary: 145 50% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 230 12% 16%;
+    --secondary-foreground: 200 10% 92%;
+    --muted: 230 12% 16%;
+    --muted-foreground: 220 10% 55%;
+    --accent: 145 50% 45%;
+    --accent-foreground: 0 0% 100%;
+    --warning: 40 85% 55%;
+    --warning-foreground: 30 60% 90%;
+    --destructive: 10 65% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 230 12% 18%;
+    --input: 230 12% 18%;
+    --ring: 145 50% 45%;
+    --surface: 230 15% 11%;
+    --surface-hover: 230 12% 14%;
+    --expiry-near: 40 50% 15%;
+    --expiry-near-border: 40 60% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
