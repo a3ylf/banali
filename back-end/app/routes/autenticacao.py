@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, Cookie
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -57,9 +57,10 @@ async def register(user_in: UsuarioCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@rota_autenticacao.post("/login", response_model=RefreshToken)
+@rota_autenticacao.post("/login", response_model=Token)
 async def login(
     credentials: UsuarioLogin,
+    response: Response,
     db: Session = Depends(get_db)
 ):
     user = db.query(Usuario).filter(Usuario.email == credentials.email).first()
@@ -79,14 +80,29 @@ async def login(
     access_token = create_access_token({"sub": user.email})
     refresh_token = create_refresh_token({"sub": user.email})
 
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=7 * 24 * 60 * 60,
+        samesite="lax",
+        secure=False,
+    )
+
     return {
         "access_token": access_token,
-        "refresh_token": refresh_token,
         "token_type": "bearer"
     }
 
+@rota_autenticacao.post("/logout")
+def logout(response: Response):
+    response.delete_cookie("refresh_token")
+    return {"detail": "Logout com sucesso"}
+
 @rota_autenticacao.post("/refresh", response_model=Token)
-def refresh_token(refresh_token: str):
+def refresh_token(refresh_token: str = Cookie(None)):
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token ausente")
 
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
