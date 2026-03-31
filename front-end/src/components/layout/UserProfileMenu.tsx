@@ -71,16 +71,11 @@ export default function UserProfileMenu() {
         <div className="px-3 py-2.5">
           <p className="text-sm font-medium text-foreground">{name}</p>
           <p className="text-[11px] text-muted-foreground">{email}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Ong Configurada</p>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={toggleTheme} className="gap-2 cursor-pointer">
           {theme === "light" ? <Moon size={14} /> : <Sun size={14} />}
           <span>{theme === "light" ? "Modo Escuro" : "Modo Claro"}</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="gap-2 cursor-pointer">
-          <Settings size={14} />
-          <span>Personalizar</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout} className="gap-2 cursor-pointer text-destructive focus:text-destructive">

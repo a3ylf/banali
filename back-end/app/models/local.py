@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import UUID, CheckConstraint, Column, Integer, String
+from sqlalchemy import UUID, CheckConstraint, Column, Integer, String, Boolean
 from database.database import Base
 from sqlalchemy.orm import relationship
 
@@ -10,6 +10,8 @@ class Local(Base):
     nome_local = Column(String, nullable=False)
     cpf_local = Column(String(11), unique=True, nullable=True)
     cnpj_local = Column(String(14), unique=True, nullable=True)
+    endereco = Column(String, nullable=True)
+    is_owner = Column(Boolean, default=False, nullable=False)
     
     movimentacoes_origem = relationship(
         "Movimentacao",

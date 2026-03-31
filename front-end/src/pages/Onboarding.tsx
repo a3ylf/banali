@@ -26,7 +26,7 @@ interface AdminData {
 export default function Onboarding() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+
   const [view, setView] = useState<View>("login");
   const [step, setStep] = useState<Step>(1);
   const [ong, setOng] = useState<OngData>({ nome: "", cnpj: "", endereco: "" });
@@ -60,19 +60,30 @@ export default function Onboarding() {
   const handleRegister = async () => {
     try {
       setIsLoading(true);
-      // Aqui integraria a criação da ONG
-      // Por enquanto vamos apenas criar o usuário
-      await api.post("/authentication/register", {
-        nome: admin.nome,
+
+      await api.post("/authentication/register-onboarding", {
+        nome_ong: ong.nome,
+        cnpj_ong: ong.cnpj,
+        endereco_ong: ong.endereco,
+        nome_admin: admin.nome,
+        email_admin: admin.email,
+        senha_admin: admin.senha
+      });
+
+      const { data } = await api.post("/authentication/login", {
         email: admin.email,
         senha: admin.senha
       });
-      
-      toast.success("Conta criada! Por favor, faça login.");
-      setView("login");
-      setLoginData({ email: admin.email, senha: "" });
-    } catch (error) {
-      toast.error("Erro ao criar conta. Verifique os dados ou tente outro e-mail.");
+      await login(data.access_token);
+
+      toast.success("Conta criada e ONG registrada com sucesso! Bem-vindo(a)!");
+      navigate("/");
+    } catch (error: any) {
+      if (error.response?.status === 409 || error.response?.status === 400) {
+        toast.error(error.response.data.detail || "Erro ao criar conta. Verifique os dados fornecidos.");
+      } else {
+        toast.error("Erro ao criar conta. Tente novamente mais tarde.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -105,9 +116,8 @@ export default function Onboarding() {
         <div className="flex bg-secondary p-1 rounded-lg mb-8">
           <button
             onClick={() => setView("login")}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-              view === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${view === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             Entrar
           </button>
@@ -116,9 +126,8 @@ export default function Onboarding() {
               setView("register");
               setStep(1);
             }}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-              view === "register" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${view === "register" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             Criar conta
           </button>
@@ -129,21 +138,19 @@ export default function Onboarding() {
             {[1, 2].map((s) => (
               <div key={s} className="flex items-center gap-3">
                 <div
-                  className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
-                    s < step
+                  className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${s < step
                       ? "bg-primary text-primary-foreground"
                       : s === step
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-secondary text-muted-foreground"
-                  }`}
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-secondary text-muted-foreground"
+                    }`}
                 >
                   {s < step ? <Check size={14} /> : s}
                 </div>
                 {s < 2 && (
                   <div
-                    className={`w-12 h-px transition-colors duration-300 ${
-                      step > 1 ? "bg-primary" : "bg-border"
-                    }`}
+                    className={`w-12 h-px transition-colors duration-300 ${step > 1 ? "bg-primary" : "bg-border"
+                      }`}
                   />
                 )}
               </div>

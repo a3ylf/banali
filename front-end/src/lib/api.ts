@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: "/api",
-  withCredentials: true, // Importante para enviar e receber cookies HttpOnly
+  withCredentials: true,
 });
 
 let isRefreshing = false;

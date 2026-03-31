@@ -38,3 +38,14 @@ class Token(BaseModel):
 
 class RefreshToken(Token):
     refresh_token: str
+
+class OnboardingRequest(BaseModel):
+    # ONG (Local) fields
+    nome_ong: str
+    cnpj_ong: str
+    endereco_ong: Optional[str] = None
+    
+    # Admin (Usuario) fields
+    nome_admin: str
+    email_admin: EmailStr
+    senha_admin: str
