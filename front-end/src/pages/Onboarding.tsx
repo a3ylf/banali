@@ -23,6 +23,16 @@ interface AdminData {
   senha: string;
 }
 
+const formatCNPJ = (value: string) => {
+  return value
+    .replace(/\D/g, "")
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2")
+    .substring(0, 18);
+};
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -63,7 +73,7 @@ export default function Onboarding() {
 
       await api.post("/authentication/register-onboarding", {
         nome_ong: ong.nome,
-        cnpj_ong: ong.cnpj,
+        cnpj_ong: ong.cnpj.replace(/\D/g, ""),
         endereco_ong: ong.endereco,
         nome_admin: admin.nome,
         email_admin: admin.email,
@@ -246,9 +256,10 @@ export default function Onboarding() {
                     </label>
                     <Input
                       value={ong.cnpj}
-                      onChange={(e) => setOng({ ...ong, cnpj: e.target.value })}
+                      onChange={(e) => setOng({ ...ong, cnpj: formatCNPJ(e.target.value) })}
                       placeholder="00.000.000/0000-00"
                       className="h-12 text-base"
+                      maxLength={18}
                     />
                   </div>
                   <div>

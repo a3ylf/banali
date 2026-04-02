@@ -1,10 +1,20 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { format, subDays, startOfWeek, endOfWeek, eachWeekOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import PageHeader from "@/components/shared/PageHeader";
-import { movimentacoes, categorias } from "@/data/mock";
+import { api } from "@/lib/api";
+
+interface MovementHistoryItem {
+  id_movimentacao: string;
+  tipo_movimentacao: "entrada" | "saida";
+  data_movimentacao: string;
+  usuario_nome: string;
+  origem_nome: string | null;
+  destino_nome: string | null;
+  itens: any[];
+}
 import {
   ChartContainer,
   ChartTooltip,
@@ -28,21 +38,32 @@ export default function Historico() {
   const [tab, setTab] = useState<Tab>("transacoes");
   const [tipoFilter, setTipoFilter] = useState<"todos" | "entrada" | "saida">("todos");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [movimentacoes, setMovimentacoes] = useState<MovementHistoryItem[]>([]);
+
+  useEffect(() => {
+    async function fetchHistory() {
+      try {
+        const res = await api.get("/demand/movement/");
+        setMovimentacoes(res.data);
+      } catch (error) {
+        console.error("Erro ao puxar histórico completo", error);
+      }
+    }
+    fetchHistory();
+  }, []);
 
   const filtered = movimentacoes.filter(
-    (m) => tipoFilter === "todos" || m.tipo === tipoFilter
+    (m) => tipoFilter === "todos" || m.tipo_movimentacao === tipoFilter
   );
 
   const chipClass = (active: boolean) =>
-    `px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${
-      active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+    `px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
     }`;
 
   const tabClass = (active: boolean) =>
-    `px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
-      active
-        ? "border-primary text-foreground"
-        : "border-transparent text-muted-foreground hover:text-foreground"
+    `px-4 py-2 text-sm font-medium transition-colors border-b-2 ${active
+      ? "border-primary text-foreground"
+      : "border-transparent text-muted-foreground hover:text-foreground"
     }`;
 
   // Analytics data
@@ -60,31 +81,31 @@ export default function Historico() {
       let entradas = 0;
       let saidas = 0;
       movimentacoes.forEach((m) => {
-        if (m.data >= weekStart && m.data <= weekEnd) {
-          const total = m.itens.reduce((s, i) => s + i.quantidade, 0);
-          if (m.tipo === "entrada") entradas += total;
+        const movDate = new Date(m.data_movimentacao);
+        if (movDate >= weekStart && movDate <= weekEnd) {
+          const total = m.itens.reduce((s: any, i: any) => s + i.quantidade, 0);
+          if (m.tipo_movimentacao === "entrada") entradas += total;
           else saidas += total;
         }
       });
 
       return { semana: weekLabel, Entradas: entradas, Saídas: saidas };
     });
-  }, []);
+  }, [movimentacoes]);
 
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     movimentacoes
-      .filter((m) => m.tipo === "saida")
+      .filter((m) => m.tipo_movimentacao === "saida")
       .forEach((m) => {
         m.itens.forEach((item) => {
-          // Try to match product name to a category
-          const cat = findCategoryForProduct(item.produto_nome);
+          const cat = item.categoria_nome || "Outros";
           counts[cat] = (counts[cat] || 0) + item.quantidade;
         });
       });
 
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, []);
+  }, [movimentacoes]);
 
   const donutColors = [
     "hsl(var(--chart-1))",
@@ -132,16 +153,15 @@ export default function Historico() {
 
           <div className="space-y-1">
             {filtered.map((mov) => (
-              <div key={mov.id}>
+              <div key={mov.id_movimentacao}>
                 <button
-                  onClick={() => setExpandedId(expandedId === mov.id ? null : mov.id)}
+                  onClick={() => setExpandedId(expandedId === mov.id_movimentacao ? null : mov.id_movimentacao)}
                   className="w-full flex items-center justify-between py-3 px-4 rounded-lg bg-surface border border-border text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                      mov.tipo === "entrada" ? "bg-primary/10" : "bg-muted"
-                    }`}>
-                      {mov.tipo === "entrada" ? (
+                    <div className={`h-8 w-8 rounded-full flex items-center justify-center ${mov.tipo_movimentacao === "entrada" ? "bg-primary/10" : "bg-muted"
+                      }`}>
+                      {mov.tipo_movimentacao === "entrada" ? (
                         <ArrowDownLeft size={14} className="text-primary" />
                       ) : (
                         <ArrowUpRight size={14} className="text-muted-foreground" />
@@ -149,7 +169,7 @@ export default function Historico() {
                     </div>
                     <div>
                       <span className="text-sm font-medium text-foreground block">
-                        {mov.tipo === "entrada" ? mov.origem?.nome : mov.destino?.nome}
+                        {mov.tipo_movimentacao === "entrada" ? mov.origem_nome || "Doador" : mov.destino_nome || "Beneficiário"}
                       </span>
                       <span className="text-[11px] text-muted-foreground">
                         {mov.itens.length} {mov.itens.length === 1 ? "item" : "itens"} · {mov.usuario_nome}
@@ -157,12 +177,12 @@ export default function Historico() {
                     </div>
                   </div>
                   <span className="text-[11px] text-muted-foreground tabular-nums">
-                    {format(mov.data, "dd MMM yyyy", { locale: ptBR })}
+                    {format(new Date(mov.data_movimentacao), "dd MMM yyyy", { locale: ptBR })}
                   </span>
                 </button>
 
                 <AnimatePresence>
-                  {expandedId === mov.id && (
+                  {expandedId === mov.id_movimentacao && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -172,7 +192,7 @@ export default function Historico() {
                     >
                       <div className="px-4 pb-3 pt-1 ml-11 space-y-1">
                         {mov.itens.map((item) => (
-                          <div key={item.id} className="flex items-center justify-between py-1.5 text-sm">
+                          <div key={item.id_movimentacao_lote} className="flex items-center justify-between py-1.5 text-sm">
                             <span className="text-muted-foreground">{item.produto_nome}</span>
                             <span className="font-mono tabular-nums text-foreground">{item.quantidade}</span>
                           </div>
@@ -251,18 +271,3 @@ export default function Historico() {
   );
 }
 
-// Helper: match product name to category name from mock data
-function findCategoryForProduct(produtoNome: string): string {
-  const map: Record<string, string> = {
-    "Arroz Branco": "Grãos e Cereais",
-    "Feijão Carioca": "Grãos e Cereais",
-    "Macarrão Espaguete": "Grãos e Cereais",
-    "Açúcar Refinado": "Grãos e Cereais",
-    "Leite Integral": "Laticínios",
-    "Milho em Conserva": "Enlatados",
-    "Sabonete": "Higiene",
-    "Banana Prata": "Hortifruti",
-    "Suco de Laranja": "Bebidas",
-  };
-  return map[produtoNome] || "Outros";
-}

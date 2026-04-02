@@ -3,57 +3,45 @@ from typing import List, Optional
 from pydantic import BaseModel
 from uuid import UUID
 
-class EntradaCreate(BaseModel):
+class EntradaItemCreate(BaseModel):
     id_produto: UUID
     quantidade: int
     data_validade: date
-    id_local_origem: UUID
 
-class EntradaPublic(BaseModel):
+class EntradaBatchRequest(BaseModel):
+    id_local_origem: UUID
+    itens: List[EntradaItemCreate]
+
+class MovimentacaoPublic(BaseModel):
     id_movimentacao: UUID
     tipo_movimentacao: str
     data_movimentacao: datetime
     id_usuario: UUID
     id_origem: Optional[UUID]
     id_destino: Optional[UUID]
-    quantidade: float
-    id_produto: UUID
-    data_validade: date
-    id_lote: UUID
     
     class Config:
         from_attributes = True
 
-class SaidaCreate(BaseModel):
-    """Schema para criar uma saída"""
-    id_produto: UUID
-    quantidade: int
-    id_local_destino: UUID
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "id_produto": "123e4567-e89b-12d3-a456-426614174000",
-                "quantidade": 50,
-                "id_local_destino": "123e4567-e89b-12d3-a456-426614174002",
-            }
-        }
-
-class LoteUtilizado(BaseModel):
-    """Schema para detalhar lotes usados na saída"""
+class SaidaItemCreate(BaseModel):
     id_lote: UUID
-    quantidade_utilizada: int
-    quantidade_restante: int
-    data_validade: date
+    quantidade: int
 
-class SaidaResponse(BaseModel):
-    """Schema de resposta para saída"""
-    id_movimentacao: UUID
-    quantidade_total: int
-    id_produto: UUID
+class SaidaBatchRequest(BaseModel):
+    id_local_destino: UUID
+    itens: List[SaidaItemCreate]
+
+class MovimentacaoItemPublic(BaseModel):
+    id_movimentacao_lote: UUID
     produto_nome: str
-    data_movimentacao: datetime
-    lotes_utilizados: List[LoteUtilizado]
+    quantidade: int
+    categoria_nome: str
 
-    class Config:
-        from_attributes = True
+class MovimentacaoHistoryPublic(BaseModel):
+    id_movimentacao: UUID
+    tipo_movimentacao: str
+    data_movimentacao: datetime
+    usuario_nome: str
+    origem_nome: Optional[str]
+    destino_nome: Optional[str]
+    itens: List[MovimentacaoItemPublic]

@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, Cookie
@@ -70,6 +71,9 @@ async def register_onboarding(data: OnboardingRequest, db: Session = Depends(get
     if existe_nome:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Local '{nome_normalizado}' já existe")
     
+    if data.cnpj_ong and len(data.cnpj_ong) != 14:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O CNPJ deve possuir 14 números.")
+
     if data.cnpj_ong:
         existe_cnpj = db.query(Local).filter(Local.cnpj_local == data.cnpj_ong).first()
         if existe_cnpj:
@@ -80,7 +84,7 @@ async def register_onboarding(data: OnboardingRequest, db: Session = Depends(get
     
     new_local = Local(
         nome_local=nome_normalizado,
-        cnpj_local=data.cnpj_ong if data.cnpj_ong else None,
+        cnpj_local=data.cnpj_ong,
         endereco=data.endereco_ong,
         is_owner=True
     )
