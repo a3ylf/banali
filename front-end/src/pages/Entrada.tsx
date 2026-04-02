@@ -1,20 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Trash2, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import PageHeader from "@/components/shared/PageHeader";
 import CommandSearch from "@/components/shared/CommandSearch";
-import { locais, produtos, categorias, lotes, type Produto } from "@/data/mock";
+import { api } from "@/lib/api";
+
+interface Categoria {
+  id_categoria: string;
+  nome_categoria: string;
+}
+
+interface Produto {
+  id_produto: string;
+  nome_produto: string;
+  unidade_medida: string;
+  id_categoria: string;
+  categoria?: Categoria; // appended on frontend
+}
+
+interface LocalEntity {
+  id_local: string;
+  nome_local: string;
+  is_owner: boolean;
+}
 
 interface EntradaItem {
-  id: string;
+  id: string; // frontend key
   produto: Produto;
   quantidade: number;
   data_validade: string;
-  isNew: boolean;
-  /** If merging with existing lote, store its id */
-  existingLoteId?: string;
 }
 
 const unidades = ["un", "Kg", "g", "L", "ml", "pct", "cx"];
@@ -23,15 +39,48 @@ export default function Entrada() {
   const navigate = useNavigate();
   const [origemId, setOrigemId] = useState("");
   const [itens, setItens] = useState<EntradaItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [prodSearch, setProdSearch] = useState("");
   const [showProdList, setShowProdList] = useState(false);
   const [showNewProd, setShowNewProd] = useState(false);
-  const [newProd, setNewProd] = useState({ nome: "", categoria_id: "", unidade_medida: "un" });
+  
+  const [newProd, setNewProd] = useState({ nome_produto: "", id_categoria: "", unidade_medida: "un" });
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
 
-  const doadores = locais.filter((l) => l.tipo === "doador");
+  const [locais, setLocais] = useState<LocalEntity[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [categoriasLista, setCategoriasLista] = useState<Categoria[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [locaisRes, prodsRes, catsRes] = await Promise.all([
+          api.get("/demand/places/"),
+          api.get("/demand/products/"),
+          api.get("/demand/categories/"),
+        ]);
+        setLocais(locaisRes.data.locais || []);
+        setCategoriasLista(catsRes.data.categorias || []);
+        
+        // Map category objects onto products for UI rendering
+        const cats = catsRes.data.categorias || [];
+        const loadedProds = prodsRes.data.produtos || [];
+        const mappedProds = loadedProds.map((p: any) => ({
+          ...p,
+          categoria: cats.find((c: any) => c.id_categoria === p.id_categoria)
+        }));
+        setProdutos(mappedProds);
+      } catch (err) {
+        toast.error("Erro ao carregar dados do sistema.");
+      }
+    }
+    loadData();
+  }, []);
+
+  const doadores = locais.filter((l) => !l.is_owner);
   const filteredProds = produtos.filter((p) =>
-    p.nome.toLowerCase().includes(prodSearch.toLowerCase())
+    p.nome_produto?.toLowerCase().includes(prodSearch.toLowerCase())
   );
 
   const addItem = (produto: Produto) => {
@@ -42,63 +91,44 @@ export default function Entrada() {
         produto,
         quantidade: 1,
         data_validade: "",
-        isNew: false,
       },
     ]);
     setProdSearch("");
     setShowProdList(false);
   };
 
-  const createAndAdd = () => {
-    if (!newProd.nome || !newProd.categoria_id) {
+  const createAndAdd = async () => {
+    if (!newProd.nome_produto || !newProd.id_categoria) {
       toast.error("Preencha nome e categoria do novo produto.");
       return;
     }
-    const cat = categorias.find((c) => c.id === newProd.categoria_id)!;
-    const produto: Produto = {
-      id: crypto.randomUUID(),
-      nome: newProd.nome,
-      descricao: "",
-      valor_numerico: 1,
-      unidade_medida: newProd.unidade_medida,
-      categoria_id: newProd.categoria_id,
-      categoria: cat,
-    };
-    addItem(produto);
-    setShowNewProd(false);
-    setNewProd({ nome: "", categoria_id: "", unidade_medida: "un" });
-  };
-
-  /**
-   * Check if a lote with same produto_id + data_validade already exists.
-   * If so, mark for upsert (merge) instead of creating new lote.
-   */
-  const checkLoteUpsert = (itemId: string, dataValidade: string) => {
-    const item = itens.find((i) => i.id === itemId);
-    if (!item) return;
-
-    const existingLote = lotes.find(
-      (l) => l.produto_id === item.produto.id && 
-        l.data_validade.toISOString().split("T")[0] === dataValidade
-    );
-
-    setItens((prev) =>
-      prev.map((i) =>
-        i.id === itemId
-          ? { ...i, data_validade: dataValidade, existingLoteId: existingLote?.id }
-          : i
-      )
-    );
-
-    if (existingLote) {
-      toast.info(
-        `Lote existente encontrado (${existingLote.quantidade_disponivel} unids). A quantidade será somada.`,
-        { duration: 4000 }
-      );
+    
+    setIsCreatingProduct(true);
+    try {
+      const res = await api.post("/demand/products/", {
+        nome_produto: newProd.nome_produto,
+        descricao: "",
+        unidade_medida: newProd.unidade_medida,
+        id_categoria: newProd.id_categoria
+      });
+      
+      const categoryObj = categoriasLista.find(c => c.id_categoria === newProd.id_categoria);
+      const createdProd = { ...res.data, categoria: categoryObj };
+      
+      setProdutos(prev => [...prev, createdProd]);
+      addItem(createdProd);
+      
+      setShowNewProd(false);
+      setNewProd({ nome_produto: "", id_categoria: "", unidade_medida: "un" });
+      toast.success("Produto criado e adicionado à lista.");
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Erro ao criar produto.");
+    } finally {
+      setIsCreatingProduct(false);
     }
   };
 
-  const updateItem = (id: string, field: "quantidade", value: number) => {
+  const updateItem = (id: string, field: "quantidade" | "data_validade", value: any) => {
     setItens((prev) =>
       prev.map((i) => (i.id === id ? { ...i, [field]: value } : i))
     );
@@ -108,7 +138,7 @@ export default function Entrada() {
     setItens((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!origemId) {
       toast.error("Selecione a origem.");
       return;
@@ -123,18 +153,26 @@ export default function Entrada() {
       return;
     }
 
-    // Build payload with upsert awareness
-    const mergedCount = itens.filter((i) => i.existingLoteId).length;
-    const newCount = itens.length - mergedCount;
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        id_local_origem: origemId,
+        itens: itens.map(i => ({
+          id_produto: i.produto.id_produto,
+          quantidade: i.quantidade,
+          data_validade: i.data_validade
+        }))
+      };
 
-    const messages: string[] = [];
-    if (newCount > 0) messages.push(`${newCount} novo(s) lote(s)`);
-    if (mergedCount > 0) messages.push(`${mergedCount} lote(s) atualizado(s)`);
-
-    toast.success(`Entrada registrada: ${messages.join(", ")}!`, {
-      action: { label: "Desfazer", onClick: () => toast.info("Ação desfeita.") },
-    });
-    navigate("/movimentar");
+      await api.post("/demand/movement/input", payload);
+      
+      toast.success("Entrada registrada com sucesso!");
+      navigate("/movimentar");
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || "Erro ao registrar entrada.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -161,7 +199,7 @@ export default function Entrada() {
         >
           <option value="">Selecionar doador...</option>
           {doadores.map((d) => (
-            <option key={d.id} value={d.id}>{d.nome}</option>
+            <option key={d.id_local} value={d.id_local}>{d.nome_local}</option>
           ))}
         </select>
         <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -182,20 +220,11 @@ export default function Entrada() {
             className="mb-2 p-3 rounded-lg bg-surface border border-border overflow-hidden"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground">{item.produto.nome}</span>
+              <span className="text-sm font-medium text-foreground">{item.produto.nome_produto}</span>
               <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-destructive">
                 <Trash2 size={14} />
               </button>
             </div>
-
-            {/* Upsert indicator */}
-            {item.existingLoteId && (
-              <div className="mb-2 px-2 py-1.5 rounded-md bg-primary/5 border border-primary/15">
-                <span className="text-[11px] text-primary font-medium">
-                  ↑ Lote existente — quantidade será somada
-                </span>
-              </div>
-            )}
 
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -218,7 +247,7 @@ export default function Entrada() {
                 <input
                   type="date"
                   value={item.data_validade}
-                  onChange={(e) => checkLoteUpsert(item.id, e.target.value)}
+                  onChange={(e) => updateItem(item.id, "data_validade", e.target.value)}
                   className="w-full h-9 px-3 rounded-md bg-secondary text-sm text-foreground outline-none ring-1 ring-transparent focus:ring-primary/30"
                 />
               </div>
@@ -242,25 +271,27 @@ export default function Entrada() {
           <div className="absolute z-30 top-full mt-1 left-0 right-0 bg-surface border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
             {filteredProds.map((p) => (
               <button
-                key={p.id}
+                key={p.id_produto}
                 onClick={() => addItem(p)}
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-surface-hover transition-colors border-b border-border last:border-0"
               >
-                <span className="text-foreground">{p.nome}</span>
-                <span className="text-[11px] text-muted-foreground ml-2">{p.categoria.nome}</span>
+                <span className="text-foreground">{p.nome_produto}</span>
+                <span className="text-[11px] text-muted-foreground ml-2">{p.categoria?.nome_categoria}</span>
               </button>
             ))}
-            <button
-              onClick={() => {
-                setShowProdList(false);
-                setShowNewProd(true);
-                setNewProd((prev) => ({ ...prev, nome: prodSearch }));
-              }}
-              className="w-full text-left px-4 py-2.5 text-sm text-primary font-medium hover:bg-surface-hover transition-colors flex items-center gap-1.5"
-            >
-              <Plus size={14} />
-              Criar "{prodSearch}"
-            </button>
+            {prodSearch && (
+              <button
+                onClick={() => {
+                  setShowProdList(false);
+                  setShowNewProd(true);
+                  setNewProd((prev) => ({ ...prev, nome_produto: prodSearch }));
+                }}
+                className="w-full text-left px-4 py-2.5 text-sm text-primary font-medium hover:bg-surface-hover transition-colors flex items-center gap-1.5"
+              >
+                <Plus size={14} />
+                Criar "{prodSearch}"
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -277,23 +308,24 @@ export default function Entrada() {
             <p className="text-xs font-medium uppercase tracking-widest text-primary mb-3">Novo Produto</p>
             <div className="space-y-2">
               <input
-                value={newProd.nome}
-                onChange={(e) => setNewProd((p) => ({ ...p, nome: e.target.value }))}
+                value={newProd.nome_produto}
+                onChange={(e) => setNewProd((p) => ({ ...p, nome_produto: e.target.value }))}
                 placeholder="Nome do produto"
                 className="w-full h-9 px-3 rounded-md bg-surface text-sm text-foreground outline-none ring-1 ring-transparent focus:ring-primary/30"
               />
               <div className="grid grid-cols-2 gap-2">
                 <div className="relative">
                   <select
-                    value={newProd.categoria_id}
-                    onChange={(e) => setNewProd((p) => ({ ...p, categoria_id: e.target.value }))}
+                    value={newProd.id_categoria}
+                    onChange={(e) => setNewProd((p) => ({ ...p, id_categoria: e.target.value }))}
                     className="w-full h-9 px-3 rounded-md bg-surface text-sm text-foreground outline-none ring-1 ring-transparent focus:ring-primary/30 appearance-none"
                   >
-                    <option value="">Categoria</option>
-                    {categorias.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    <option value="">Selecionar categoria...</option>
+                    {categoriasLista.map((c) => (
+                      <option key={c.id_categoria} value={c.id_categoria}>{c.nome_categoria}</option>
                     ))}
                   </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
                 <div className="relative">
                   <select
@@ -307,12 +339,13 @@ export default function Entrada() {
                   </select>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-2">
                 <button
                   onClick={createAndAdd}
-                  className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium"
+                  disabled={isCreatingProduct}
+                  className="flex-1 h-9 flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-medium"
                 >
-                  Criar e Adicionar
+                  {isCreatingProduct ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar e Adicionar"}
                 </button>
                 <button
                   onClick={() => setShowNewProd(false)}
@@ -329,9 +362,10 @@ export default function Entrada() {
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={handleSubmit}
-        className="w-full h-12 mt-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+        disabled={isSubmitting || itens.length === 0}
+        className="w-full h-12 flex items-center justify-center mt-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
       >
-        Registrar Entrada
+        {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Registrar Entrada"}
       </motion.button>
     </div>
   );

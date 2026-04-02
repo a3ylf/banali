@@ -160,10 +160,10 @@ async def delete_product(
 
 @rota_produto.get("/products/{id_product}/batches")
 async def get_lotes_by_produto(
-    id: UUID,
+    id_product: UUID,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    lotes = db.query(Lote).filter(Lote.id_produto == id).all()
+    lotes = db.query(Lote).filter(Lote.id_produto == id_product).all()
 
     return {"lotes": lotes}
