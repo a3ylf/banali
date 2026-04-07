@@ -17,7 +17,7 @@ async def read_products(db: Session = Depends(get_db), current_user: Usuario = D
     locais = db.query(Local).all()
     return {"locais":locais}
 
-@rota_local.get("/places/{place_id}", response_model=LocalPublic)
+@rota_local.get("/places/{local_id}", response_model=LocalPublic)
 async def get_category(
     local_id: UUID,
     db: Session = Depends(get_db),
@@ -101,7 +101,7 @@ async def create_place(
 
     return novo_local
 
-@rota_local.put("/places/{place_id}", response_model=LocalPublic)
+@rota_local.put("/places/{local_id}", response_model=LocalPublic)
 async def update_local(
     local_id: UUID,
     local_in: LocalUpdate,
@@ -169,7 +169,7 @@ async def update_local(
 
     return local
 
-@rota_local.delete("/places/{place_id}", status_code=status.HTTP_204_NO_CONTENT)
+@rota_local.delete("/places/{local_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_place(
     local_id: UUID,
     db: Session = Depends(get_db),
