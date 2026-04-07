@@ -1,21 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2, User, Plus, X, Trash2, Edit2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import PageHeader from "@/components/shared/PageHeader";
 import CommandSearch from "@/components/shared/CommandSearch";
-import { locais as initialLocais, type Local } from "@/data/mock";
+import { api } from "@/lib/api";
 
 function formatDocumento(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (digits.length <= 11) {
-    // CPF: 000.000.000-00
     return digits
       .replace(/(\d{3})(\d)/, "$1.$2")
       .replace(/(\d{3})(\d)/, "$1.$2")
       .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
   }
-  // CNPJ: 00.000.000/0000-00
   return digits
     .replace(/(\d{2})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
@@ -27,42 +25,60 @@ function getDocRaw(value: string): string {
   return value.replace(/\D/g, "").slice(0, 14);
 }
 
+interface LocalEntity {
+  id_local: string;
+  nome_local: string;
+  cpf_local: string | null;
+  cnpj_local: string | null;
+}
+
 export default function Locais() {
   const [search, setSearch] = useState("");
-  const [tipoFilter, setTipoFilter] = useState<"todos" | "doador" | "beneficiario">("todos");
-  const [allLocais, setAllLocais] = useState<Local[]>(initialLocais);
+  const [allLocais, setAllLocais] = useState<LocalEntity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
-  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formNome, setFormNome] = useState("");
-  const [formTipo, setFormTipo] = useState<"doador" | "beneficiario">("doador");
   const [formDoc, setFormDoc] = useState("");
 
-  const filtered = allLocais.filter((l) => {
-    const matchSearch = l.nome.toLowerCase().includes(search.toLowerCase());
-    const matchTipo = tipoFilter === "todos" || l.tipo === tipoFilter;
-    return matchSearch && matchTipo;
-  });
+  useEffect(() => {
+    void loadLocais();
+  }, []);
 
-  const chipClass = (active: boolean) =>
-    `px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap ${
-      active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-    }`;
+  async function loadLocais() {
+    setIsLoading(true);
+    try {
+      const res = await api.get("/demand/places/");
+      setAllLocais(res.data.locais || []);
+    } catch (error) {
+      toast.error("Erro ao carregar locais.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const filtered = allLocais.filter((local) => {
+    const documento = local.cnpj_local || local.cpf_local || "";
+    return (
+      local.nome_local.toLowerCase().includes(search.toLowerCase()) ||
+      documento.includes(getDocRaw(search))
+    );
+  });
 
   const openNew = () => {
     setEditingId(null);
     setFormNome("");
-    setFormTipo("doador");
     setFormDoc("");
     setShowForm(true);
   };
 
-  const openEdit = (local: Local) => {
-    setEditingId(local.id);
-    setFormNome(local.nome);
-    setFormTipo(local.tipo);
-    setFormDoc(local.documento);
+  const openEdit = (local: LocalEntity) => {
+    setEditingId(local.id_local);
+    setFormNome(local.nome_local);
+    setFormDoc(formatDocumento(local.cnpj_local || local.cpf_local || ""));
     setShowForm(true);
   };
 
@@ -71,8 +87,9 @@ export default function Locais() {
     setFormDoc(formatDocumento(raw));
   };
 
-  const handleSave = () => {
-    const rawDoc = formDoc.replace(/\D/g, "");
+  const handleSave = async () => {
+    const rawDoc = getDocRaw(formDoc);
+
     if (!formNome.trim()) {
       toast.error("Preencha o nome do local.");
       return;
@@ -82,38 +99,52 @@ export default function Locais() {
       return;
     }
 
-    if (editingId) {
-      setAllLocais((prev) =>
-        prev.map((l) =>
-          l.id === editingId
-            ? { ...l, nome: formNome.trim(), tipo: formTipo, documento: formDoc }
-            : l
-        )
-      );
-      toast.success("Local atualizado.");
-    } else {
-      const novo: Local = {
-        id: crypto.randomUUID(),
-        nome: formNome.trim(),
-        tipo: formTipo,
-        documento: formDoc,
-      };
-      setAllLocais((prev) => [novo, ...prev]);
-      toast.success("Local cadastrado.");
+    const payload = {
+      nome_local: formNome.trim(),
+      cpf_local: rawDoc.length === 11 ? rawDoc : null,
+      cnpj_local: rawDoc.length === 14 ? rawDoc : null,
+    };
+
+    setIsSaving(true);
+    try {
+      if (editingId) {
+        const res = await api.put(`/demand/places/${editingId}`, payload);
+        setAllLocais((prev) =>
+          prev.map((local) => (local.id_local === editingId ? res.data : local))
+        );
+        toast.success("Local atualizado.");
+      } else {
+        const res = await api.post("/demand/places/", payload);
+        setAllLocais((prev) => [res.data, ...prev]);
+        toast.success("Local cadastrado.");
+      }
+
+      setShowForm(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Erro ao salvar local.");
+    } finally {
+      setIsSaving(false);
     }
-    setShowForm(false);
   };
 
-  const handleDelete = (id: string) => {
-    setAllLocais((prev) => prev.filter((l) => l.id !== id));
-    toast.success("Local removido.");
+  const handleDelete = async (id: string) => {
+    setIsDeletingId(id);
+    try {
+      await api.delete(`/demand/places/${id}`);
+      setAllLocais((prev) => prev.filter((local) => local.id_local !== id));
+      toast.success("Local removido.");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Erro ao remover local.");
+    } finally {
+      setIsDeletingId(null);
+    }
   };
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       <PageHeader
         title="Locais"
-        subtitle="Doadores e beneficiários"
+        subtitle="Cadastro de locais e documentos"
         action={
           <button
             onClick={openNew}
@@ -129,17 +160,6 @@ export default function Locais() {
         <CommandSearch value={search} onChange={setSearch} placeholder="Buscar local..." />
       </div>
 
-      <div className="flex gap-2 mb-5">
-        {([["todos", "Todos"], ["doador", "Doadores"], ["beneficiario", "Beneficiários"]] as const).map(
-          ([key, label]) => (
-            <button key={key} className={chipClass(tipoFilter === key)} onClick={() => setTipoFilter(key)}>
-              {label}
-            </button>
-          )
-        )}
-      </div>
-
-      {/* Form side panel */}
       <AnimatePresence>
         {showForm && (
           <motion.div
@@ -165,18 +185,6 @@ export default function Locais() {
                 className="w-full h-10 px-3 rounded-md bg-surface text-sm text-foreground outline-none ring-1 ring-transparent focus:ring-primary/30"
               />
 
-              <div className="flex gap-2">
-                {([["doador", "Doador"], ["beneficiario", "Beneficiário"]] as const).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setFormTipo(key)}
-                    className={chipClass(formTipo === key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
               <div>
                 <label className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">
                   CPF ou CNPJ
@@ -191,8 +199,12 @@ export default function Locais() {
               </div>
 
               <div className="flex gap-2 pt-1">
-                <button onClick={handleSave} className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium">
-                  {editingId ? "Salvar" : "Cadastrar"}
+                <button
+                  onClick={() => void handleSave()}
+                  disabled={isSaving}
+                  className="flex-1 h-9 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60"
+                >
+                  {isSaving ? "Salvando..." : editingId ? "Salvar" : "Cadastrar"}
                 </button>
                 <button onClick={() => setShowForm(false)} className="h-9 px-4 rounded-md bg-secondary text-muted-foreground text-sm">
                   Cancelar
@@ -203,49 +215,56 @@ export default function Locais() {
         )}
       </AnimatePresence>
 
-      <div className="space-y-1">
-        {filtered.map((local) => (
-          <div
-            key={local.id}
-            className="flex items-center gap-3 py-3 px-4 rounded-lg bg-surface border border-border group"
-          >
-            <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-              local.tipo === "doador" ? "bg-primary/10" : "bg-muted"
-            }`}>
-              {local.tipo === "doador" ? (
-                <Building2 size={14} className="text-primary" />
-              ) : (
-                <User size={14} className="text-muted-foreground" />
-              )}
+      {isLoading ? (
+        <div className="py-12 text-center">
+          <p className="text-sm text-muted-foreground">Carregando locais...</p>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {filtered.map((local) => (
+            <div
+              key={local.id_local}
+              className="flex items-center gap-3 py-3 px-4 rounded-lg bg-surface border border-border group"
+            >
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                local.cnpj_local ? "bg-primary/10" : "bg-muted"
+              }`}>
+                {local.cnpj_local ? (
+                  <Building2 size={14} className="text-primary" />
+                ) : (
+                  <User size={14} className="text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium text-foreground block truncate">{local.nome_local}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {local.cnpj_local ? "CNPJ" : "CPF"} · {formatDocumento(local.cnpj_local || local.cpf_local || "")}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <button
+                  onClick={() => openEdit(local)}
+                  className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <Edit2 size={13} />
+                </button>
+                <button
+                  onClick={() => void handleDelete(local.id_local)}
+                  disabled={isDeletingId === local.id_local}
+                  className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="text-sm font-medium text-foreground block truncate">{local.nome}</span>
-              <span className="text-[11px] text-muted-foreground">
-                {local.tipo === "doador" ? "Doador" : "Beneficiário"} · {local.documento}
-              </span>
+          ))}
+          {filtered.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-sm text-muted-foreground">Nenhum local encontrado.</p>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button
-                onClick={() => openEdit(local)}
-                className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              >
-                <Edit2 size={13} />
-              </button>
-              <button
-                onClick={() => handleDelete(local.id)}
-                className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="py-12 text-center">
-            <p className="text-sm text-muted-foreground">Nenhum local encontrado.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

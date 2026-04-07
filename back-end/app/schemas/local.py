@@ -11,6 +11,8 @@ class LocalCreate(BaseModel):
 class LocalPublic(BaseModel):
     id_local: UUID
     nome_local: str
+    cpf_local: str | None = None
+    cnpj_local: str | None = None
 
     class Config:
         from_attributes = True
