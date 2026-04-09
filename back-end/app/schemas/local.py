@@ -13,6 +13,7 @@ class LocalPublic(BaseModel):
     nome_local: str
     cpf_local: str | None = None
     cnpj_local: str | None = None
+    is_owner: bool = False
 
     class Config:
         from_attributes = True
