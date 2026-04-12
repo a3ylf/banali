@@ -126,26 +126,6 @@ export default function Locais() {
     return matchSearch && matchTipo;
   });
 
-  async function loadLocais() {
-    setIsLoading(true);
-    try {
-      const res = await api.get("/demand/places/");
-      setAllLocais(res.data.locais || []);
-    } catch (error) {
-      toast.error("Erro ao carregar locais.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  const filtered = allLocais.filter((local) => {
-    const documento = local.cnpj_local || local.cpf_local || "";
-    return (
-      local.nome_local.toLowerCase().includes(search.toLowerCase()) ||
-      documento.includes(getDocRaw(search))
-    );
-  });
-
   const openNew = () => {
     setEditingId(null);
     setFormNome("");
@@ -308,7 +288,8 @@ export default function Locais() {
         </div>
       )}
 
-      <div className="space-y-1">
+      {!isLoading && (
+        <div className="space-y-1">
         {filtered.map((local) => (
           <div
             key={local.id}
@@ -329,10 +310,11 @@ export default function Locais() {
                 {local.tipo === "doador" ? "Doador" : "Beneficiário"} · {local.documento}
               </span>
             </div>
-          ))}
-          {filtered.length === 0 && (
-            <div className="py-12 text-center">
-              <p className="text-sm text-muted-foreground">Nenhum local encontrado.</p>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="py-12 text-center">
+            <p className="text-sm text-muted-foreground">Nenhum local encontrado.</p>
             </div>
           )}
         </div>
